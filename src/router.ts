@@ -2,8 +2,9 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, login } from "./handlers";
+import { createAccount, getUser, login } from "./handlers";
 import { handleErrors } from "./middleware/validation";
+import { authenticate } from "./middleware/auth";
 
 const router = Router();
 
@@ -39,5 +40,7 @@ router.post('/login',
 
     login
 )
+
+router.get('/user', authenticate, getUser)
 
 export default router;
