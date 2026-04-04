@@ -50,9 +50,9 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const updateProfile = async (req: Request, res: Response) => {
 
-    const { id, nombre, apellido, email } = req.body;
+    const { _id, nombre, apellido, email } = req.body;
 
-    if (!id) {
+    if (!_id) {
         const error = new Error('El id es requerido');
         return res.status(400).json({ error: error.message })
     }
@@ -60,7 +60,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     try {
 
         const user = await User.findByIdAndUpdate(
-            id,
+            _id,
             { nombre, apellido, email },
             { new: true, runValidators: true }
         ).select('-password')

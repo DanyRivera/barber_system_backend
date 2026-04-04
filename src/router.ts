@@ -43,7 +43,7 @@ router.post('/login',
 
 router.get('/user', authenticate, getUser)
 
-router.put('/update/profile',
+router.put('/user',
 
     authenticate,
     
