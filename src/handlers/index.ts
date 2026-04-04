@@ -47,3 +47,36 @@ export const login = async (req: Request, res: Response) => {
 export const getUser = async (req: Request, res: Response) => {
     res.json(req.user)
 }
+
+export const updateProfile = async (req: Request, res: Response) => {
+
+    const { id, nombre, apellido, email } = req.body;
+
+    if (!id) {
+        const error = new Error('El id es requerido');
+        return res.status(400).json({ error: error.message })
+    }
+
+    try {
+
+        const user = await User.findByIdAndUpdate(
+            id,
+            { nombre, apellido, email },
+            { new: true, runValidators: true }
+        ).select('-password')
+
+        if (!user) {
+            const error = new Error('Usuario no encontrado');
+            return res.status(400).json({ error: error.message })
+        }
+
+        res.json({
+            msg: "Usuario Actualizado Correctamente",
+            user
+        })
+
+    } catch (error) {
+        res.status(500).json({ error: 'Hubo un problema intentalo de nuevo' });
+    }
+
+}

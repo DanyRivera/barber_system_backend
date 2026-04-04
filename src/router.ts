@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login } from "./handlers";
+import { createAccount, getUser, login, updateProfile } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
 
@@ -19,7 +19,7 @@ router.post('/registro',
         .isEmail()
         .withMessage("Email no válido"),
     body('password')
-        .isLength({min: 8})
+        .isLength({ min: 8 })
         .withMessage("The password must be at least 8 characters."),
 
     handleErrors,
@@ -28,7 +28,7 @@ router.post('/registro',
 )
 
 router.post('/login',
-    
+
     body('email')
         .isEmail()
         .withMessage("Email no válido"),
@@ -42,5 +42,24 @@ router.post('/login',
 )
 
 router.get('/user', authenticate, getUser)
+
+router.put('/update/profile',
+
+    authenticate,
+    
+    body('nombre')
+        .notEmpty()
+        .withMessage('El nombre es obligatorio'),
+    body('apellido')
+        .notEmpty()
+        .withMessage('El apellido es obligatorio'),
+    body('email')
+        .isEmail()
+        .withMessage("Email no válido"),
+
+    handleErrors,
+
+    updateProfile
+)
 
 export default router;
