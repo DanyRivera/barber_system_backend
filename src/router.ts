@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login, updateProfile } from "./handlers";
+import { createAccount, getUser, login, updateProfile, createAppointment } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
 
@@ -46,7 +46,7 @@ router.get('/user', authenticate, getUser)
 router.put('/user',
 
     authenticate,
-    
+
     body('nombre')
         .notEmpty()
         .withMessage('El nombre es obligatorio'),
@@ -60,6 +60,28 @@ router.put('/user',
     handleErrors,
 
     updateProfile
+)
+
+router.post('/cita',
+
+    authenticate,
+
+    body('nombre')
+        .notEmpty()
+        .withMessage('El nombre es obligatorio'),
+
+    body('telefono')
+        .notEmpty()
+        .withMessage('El telefono es obligatorio'),
+
+    body('fecha_hora')
+        .notEmpty()
+        .withMessage('La fecha y hora son obligatorios'),
+
+
+    handleErrors,
+
+    createAppointment
 )
 
 export default router;

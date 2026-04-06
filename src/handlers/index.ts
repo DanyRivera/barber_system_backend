@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import jwt from "jsonwebtoken";
 
 import User from "../models/User";
+import Cita from "../models/Cita";
 import { hashPassword, checkPassword } from "../utils/auth";
 import { generateJWT } from "../utils/jwt";
 
@@ -78,5 +79,31 @@ export const updateProfile = async (req: Request, res: Response) => {
     } catch (error) {
         res.status(500).json({ error: 'Hubo un problema intentalo de nuevo' });
     }
+
+}
+
+export const createAppointment = async (req: Request, res: Response) => {
+
+    const {fecha_hora, nombre, telefono, costo} = req.body;
+
+    const [fecha, hora] = fecha_hora.split('T')
+
+    const cita = new Cita({
+        nombre,
+        telefono,
+        fecha,
+        hora,
+        costo
+    });
+
+    await cita.save();
+
+    res.status(200).send('Cita Agendada Correctamente');
+
+    //Validar que no exista una cita con las misma hora y cita
+    //Que la fecha y hora sean futuras
+    //Validar Hora dentro del horario de la barbería
+    //Validar Formato de teléfono
+    //Validar Duplicado por cliente
 
 }
