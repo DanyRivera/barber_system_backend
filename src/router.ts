@@ -5,6 +5,7 @@ import 'dotenv/config'
 import { createAccount, getUser, login, updateProfile, createAppointment } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
+import {appointmentValidation} from "./middleware/appointmentValidation"
 
 const router = Router();
 
@@ -80,6 +81,8 @@ router.post('/cita',
 
 
     handleErrors,
+
+    appointmentValidation,
 
     createAppointment
 )

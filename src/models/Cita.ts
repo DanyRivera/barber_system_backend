@@ -19,7 +19,6 @@ const citaSchema = new Schema({
         type: String,
         require: true,
         trim: true,
-        unique: true,
     },
     fecha: {
         type: Date,

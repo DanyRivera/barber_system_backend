@@ -84,26 +84,41 @@ export const updateProfile = async (req: Request, res: Response) => {
 
 export const createAppointment = async (req: Request, res: Response) => {
 
-    const {fecha_hora, nombre, telefono, costo} = req.body;
+    try {
+        const { fecha_hora, nombre, telefono, costo } = req.body;
 
-    const [fecha, hora] = fecha_hora.split('T')
+        //Separar la hora y fecha del offSet que se le pasa desde el front (-06:00)
+        const [fecha, horaConOffset] = fecha_hora.split('T');
+        const [hora,] = horaConOffset.split('-')
 
-    const cita = new Cita({
-        nombre,
-        telefono,
-        fecha,
-        hora,
-        costo
-    });
+        //Validar que no exista una cita con las misma hora y cita
+        const citaExist = await Cita.findOne({ fecha, hora });
+        if (citaExist) {
+            const error = new Error("Ya hay una cita ese día y hora");
+            return res.status(409).json({ error: error.message });
+        }
 
-    await cita.save();
+        //Validar Duplicado por cliente
+        const clienteDuplicado = await Cita.findOne({ telefono, fecha });
+        if (clienteDuplicado) {
+            const error = new Error("Ese cliente ya tienen una cita ese día");
+            return res.status(409).json({ error: error.message });
+        }
 
-    res.status(200).send('Cita Agendada Correctamente');
+        const cita = new Cita({
+            nombre,
+            telefono,
+            fecha,
+            hora,
+            costo
+        });
 
-    //Validar que no exista una cita con las misma hora y cita
-    //Que la fecha y hora sean futuras
-    //Validar Hora dentro del horario de la barbería
-    //Validar Formato de teléfono
-    //Validar Duplicado por cliente
+        await cita.save();
+
+        res.status(201).send('Cita Agendada Correctamente');
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
+    }
 
 }
