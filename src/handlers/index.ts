@@ -85,11 +85,18 @@ export const updateProfile = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
 
     try {
-        const { fecha_hora, nombre, telefono, costo } = req.body;
+        const { fecha_hora, nombre, telefono, costo, user_id } = req.body;
 
         //Separar la hora y fecha del offSet que se le pasa desde el front (-06:00)
         const [fecha, horaConOffset] = fecha_hora.split('T');
         const [hora,] = horaConOffset.split('-')
+
+        //Vaalidar que el user_id sea válido
+        const userExist = await User.findById(user_id);
+        if (!userExist) {
+            const error = new Error("El usuario no existe");
+            return res.status(404).json({ error: error.message });
+        }
 
         //Validar que no exista una cita con las misma hora y cita
         const citaExist = await Cita.findOne({ fecha, hora });
@@ -110,7 +117,8 @@ export const createAppointment = async (req: Request, res: Response) => {
             telefono,
             fecha,
             hora,
-            costo
+            costo,
+            user_id
         });
 
         await cita.save();

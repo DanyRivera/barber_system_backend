@@ -5,7 +5,8 @@ export interface ICita {
     telefono: string,
     fecha: Date,
     hora: string
-    costo?: number
+    costo?: number,
+    user_id: Schema.Types.ObjectId
 }
 
 
@@ -33,6 +34,11 @@ const citaSchema = new Schema({
     costo: {
         type: Number,
         require: false
+    },
+    user_id: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: true 
     }
 })
 
