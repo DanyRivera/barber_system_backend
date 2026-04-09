@@ -1,9 +1,9 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
-export interface ICita {
+export interface ICita extends Document {
     nombre: string,
     telefono: string,
-    fecha: Date,
+    fecha: string,
     hora: string
     costo?: number,
     user_id: Schema.Types.ObjectId
@@ -22,7 +22,7 @@ const citaSchema = new Schema({
         trim: true,
     },
     fecha: {
-        type: Date,
+        type: String,
         require: true,
         trim: true
     },

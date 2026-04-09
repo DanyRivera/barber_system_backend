@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import jwt from "jsonwebtoken";
+import {Schema} from "mongoose";
 
 import User from "../models/User";
 import Cita from "../models/Cita";
@@ -129,4 +129,13 @@ export const createAppointment = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
     }
 
+}
+
+export const getAppointments = async (req: Request, res: Response) => {
+    try {
+        const citas = await Cita.find({ user_id: req.user!._id as unknown as Schema.Types.ObjectId });
+        res.status(200).json(citas);
+    } catch (error) {
+        res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
+    }
 }

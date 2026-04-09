@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login, updateProfile, createAppointment } from "./handlers";
+import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
 import {appointmentValidation} from "./middleware/appointmentValidation"
@@ -62,6 +62,8 @@ router.put('/user',
 
     updateProfile
 )
+
+router.get('/citas', authenticate, getAppointments);
 
 router.post('/cita',
 
