@@ -6,7 +6,8 @@ export interface ICita extends Document {
     fecha: string,
     hora: string
     costo?: number,
-    user_id: Schema.Types.ObjectId
+    user_id: Schema.Types.ObjectId,
+    estado: string
 }
 
 
@@ -35,10 +36,15 @@ const citaSchema = new Schema({
         type: Number,
         require: false
     },
-    user_id: { 
-        type: Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true 
+    user_id: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    estado: {
+        type: String,
+        enum: ['pendiente', 'confirmada', 'completada', 'cancelada'],
+        default: 'pendiente'
     }
 })
 

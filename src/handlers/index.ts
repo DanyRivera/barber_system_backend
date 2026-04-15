@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import {Schema} from "mongoose";
+import { Schema } from "mongoose";
 
 import User from "../models/User";
 import Cita from "../models/Cita";
@@ -136,6 +136,37 @@ export const getAppointments = async (req: Request, res: Response) => {
         const citas = await Cita.find({ user_id: req.user!._id as unknown as Schema.Types.ObjectId });
         res.status(200).json(citas);
     } catch (error) {
+        res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
+    }
+}
+
+export const changeStatus = async (req: Request, res: Response) => {
+    try {
+
+        const {estado} = req.body;
+        const {id} = req.params
+
+        //Validar que no exista una cita con las misma hora y cita
+        const citaExist = await Cita.findById(id);
+        if (!citaExist) {
+            const error = new Error("Esa cita no existe");
+            return res.status(404).json({ error: error.message });
+        }
+
+        const statusValidos = ['pendiente', 'confirmada', 'completada', 'cancelada'];
+        if (!statusValidos.includes(estado)) {
+            const error = new Error("Status no válido");
+            return res.status(400).json({ error: error.message });
+        }
+
+
+        citaExist.estado = estado;
+        await citaExist.save();
+        res.status(200).send('Estado de la cita cambiado correctamente');
+
+
+    } catch (error) {
+        console.log(error);
         res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
     }
 }

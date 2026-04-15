@@ -2,10 +2,10 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments } from "./handlers";
+import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments, changeStatus } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
-import {appointmentValidation} from "./middleware/appointmentValidation"
+import { appointmentValidation } from "./middleware/appointmentValidation"
 
 const router = Router();
 
@@ -87,6 +87,19 @@ router.post('/cita',
     appointmentValidation,
 
     createAppointment
+)
+
+router.patch('/cita/:id/status',
+
+    authenticate,
+
+    body('estado')
+        .notEmpty()
+        .withMessage('El estado es obligatorio'),
+
+    handleErrors,
+
+    changeStatus
 )
 
 export default router;
