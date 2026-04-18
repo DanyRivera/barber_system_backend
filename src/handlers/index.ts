@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 import User from "../models/User";
 import Cita from "../models/Cita";
@@ -131,6 +131,74 @@ export const createAppointment = async (req: Request, res: Response) => {
 
 }
 
+export const updateAppointment = async (req: Request, res: Response) => {
+
+    try {
+        const { id } = req.params;
+        const objectId = new mongoose.Types.ObjectId(id as string);
+
+        const { fecha_hora, nombre, telefono, costo } = req.body;
+
+        //Separar la hora y fecha del offSet que se le pasa desde el front (-06:00)
+        const [fecha, horaConOffset] = fecha_hora.split('T');
+        const [hora,] = horaConOffset.split('-')
+
+        // Verificar que la cita existe
+        const cita = await Cita.findById(id);
+        if (!cita) {
+            const error = new Error("La cita no existe");
+            return res.status(404).json({ error: error.message });
+        }
+
+        //Validar que no exista una cita con las misma hora y cita
+        const citaExist = await Cita.findOne({ fecha, hora, _id: { $ne: objectId } });
+        if (citaExist) {
+            const error = new Error("Ya hay una cita ese día y hora");
+            return res.status(409).json({ error: error.message });
+        }
+
+        //Validar Duplicado por cliente
+        const clienteDuplicado = await Cita.findOne({ telefono, fecha, _id: { $ne: objectId } });
+        if (clienteDuplicado) {
+            const error = new Error("Ese cliente ya tienen una cita ese día");
+            return res.status(409).json({ error: error.message });
+        }
+
+        cita.nombre = nombre;
+        cita.telefono = telefono;
+        cita.fecha = fecha;
+        cita.hora = hora;
+        cita.costo = costo;
+        await cita.save();
+
+        res.status(201).send('Cita Actualizada Correctamente');
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ error: 'Error inesperado, intentalo nuevamente' });
+    }
+
+}
+
+export const deleteAppointment = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const cita = await Cita.findById(id);
+
+        if (!cita) {
+            const error = new Error("La cita no existe");
+            return res.status(404).json({ error: error.message });
+        }
+
+        await cita.deleteOne();
+        res.status(200).send('Cita eliminada correctamente');
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
+    }
+}
+
 export const getAppointments = async (req: Request, res: Response) => {
     try {
         const citas = await Cita.find({ user_id: req.user!._id as unknown as Schema.Types.ObjectId });
@@ -143,8 +211,8 @@ export const getAppointments = async (req: Request, res: Response) => {
 export const changeStatus = async (req: Request, res: Response) => {
     try {
 
-        const {estado} = req.body;
-        const {id} = req.params
+        const { estado } = req.body;
+        const { id } = req.params
 
         //Validar que no exista una cita con las misma hora y cita
         const citaExist = await Cita.findById(id);

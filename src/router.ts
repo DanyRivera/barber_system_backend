@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments, changeStatus } from "./handlers";
+import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments, changeStatus, updateAppointment, deleteAppointment } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
 import { appointmentValidation } from "./middleware/appointmentValidation"
@@ -88,6 +88,33 @@ router.post('/cita',
 
     createAppointment
 )
+
+router.patch('/cita/:id',
+
+    authenticate,
+
+    body('nombre')
+        .notEmpty()
+        .withMessage('El nombre es obligatorio'),
+
+    body('telefono')
+        .notEmpty()
+        .withMessage('El telefono es obligatorio'),
+
+    body('fecha_hora')
+        .notEmpty()
+        .withMessage('La fecha y hora son obligatorios'),
+
+
+    handleErrors,
+
+    appointmentValidation,
+
+    updateAppointment
+)
+
+router.delete('/cita/:id', authenticate,  deleteAppointment)
+
 
 router.patch('/cita/:id/status',
 
