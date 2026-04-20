@@ -2,7 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import 'dotenv/config'
 
-import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments, changeStatus, updateAppointment, deleteAppointment } from "./handlers";
+import { createAccount, getUser, login, updateProfile, createAppointment, getAppointments, changeStatus, updateAppointment, deleteAppointment, answerIA } from "./handlers";
 import { handleErrors } from "./middleware/validation";
 import { authenticate } from "./middleware/auth";
 import { appointmentValidation } from "./middleware/appointmentValidation"
@@ -128,5 +128,7 @@ router.patch('/cita/:id/status',
 
     changeStatus
 )
+
+router.post('/ia', authenticate, answerIA)
 
 export default router;

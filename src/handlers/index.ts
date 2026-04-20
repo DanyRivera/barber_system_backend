@@ -1,10 +1,16 @@
 import { Request, Response } from "express"
 import mongoose, { Schema } from "mongoose";
+import { generateText } from "ai";
+import { createGroq } from "@ai-sdk/groq";
 
 import User from "../models/User";
 import Cita from "../models/Cita";
 import { hashPassword, checkPassword } from "../utils/auth";
 import { generateJWT } from "../utils/jwt";
+
+const groq = createGroq({
+    apiKey: process.env.GROQ_API_KEY,
+})
 
 export const createAccount = async (req: Request, res: Response) => {
     const { nombre, apellido, email, password } = req.body;
@@ -236,5 +242,37 @@ export const changeStatus = async (req: Request, res: Response) => {
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: 'Error inesperado, intentalo nuevamente' });
+    }
+}
+
+export const answerIA = async (req: Request, res: Response) => {
+    try {
+
+        const { messages } = req.body
+
+        const citas = await Cita.find({ user_id: req.user!._id as unknown as Schema.Types.ObjectId });
+
+        const systemPrompt = `
+            Eres un asistente inteligente para una barbería. Tienes acceso completo al sistema de citas.
+            Fecha de hoy: ${new Date().toLocaleDateString('es-MX')}
+            ${JSON.stringify(citas, null, 2)}
+            Puedes responder preguntas sobre las citas, dar métricas y conclusiones.
+            Responde siempre en español. Sé directo y útil.
+        `
+
+        const result = await generateText({
+            model: groq('llama-3.3-70b-versatile'),
+            system: systemPrompt,
+            messages, // array de { role: 'user' | 'assistant', content: string }
+        })
+
+        res.json({
+            ok: true,
+            response: result.text,
+        })
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ error: 'ok inesperado, intentalo nuevamente' });
     }
 }
