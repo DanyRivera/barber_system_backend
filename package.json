@@ -13,8 +13,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@ai-sdk/groq": "^3.0.35",
-    "ai": "^6.0.168",
+    "@ai-sdk/groq": "^1.2.9",
+    "ai": "^4.3.16",
     "bcrypt": "^6.0.0",
     "colors": "^1.4.0",
     "cors": "^2.8.6",
@@ -22,7 +22,8 @@
     "express": "^5.2.1",
     "express-validator": "^7.3.1",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.1.6"
+    "mongoose": "^9.1.6",
+    "zod": "^3.25.28"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
