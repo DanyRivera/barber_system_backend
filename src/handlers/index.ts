@@ -284,37 +284,37 @@ export const answerIA = async (req: Request, res: Response) => {
         const citas = await Cita.find({ user_id: userId })
 
         const systemPrompt = `
-Eres un asistente inteligente para una barbería. Tienes acceso completo al sistema de citas.
-Fecha de hoy: ${new Date().toLocaleDateString('es-MX')}
+                                Eres un asistente inteligente para una barbería. Tienes acceso completo al sistema de citas.
+                                Fecha de hoy: ${new Date().toLocaleDateString('es-MX')}
 
-=== CITAS DEL SISTEMA ===
-${JSON.stringify(citas, null, 2)}
-=========================
+                                === CITAS DEL SISTEMA ===
+                                ${JSON.stringify(citas, null, 2)}
+                                =========================
 
-REGLAS ESTRICTAS:
-- Si el usuario quiere CREAR una cita → SIEMPRE usa la tool "crearCita", NUNCA respondas con texto
-- Si el usuario quiere EDITAR una cita → SIEMPRE usa la tool "editarCita", NUNCA respondas con texto
-- Si el usuario quiere CAMBIAR ESTADO → SIEMPRE usa la tool "cambiarEstado", NUNCA respondas con texto
-- Si el usuario quiere ELIMINAR una cita → SIEMPRE usa la tool "eliminarCita", NUNCA respondas con texto
-- NUNCA confirmes una acción sin haberla ejecutado con la tool correspondiente
-- Para preguntas o consultas responde con texto normal
+                                REGLAS ESTRICTAS:
+                                - Si el usuario quiere CREAR una cita → SIEMPRE usa la tool "crearCita", NUNCA respondas con texto
+                                - Si el usuario quiere EDITAR una cita → SIEMPRE usa la tool "editarCita", NUNCA respondas con texto
+                                - Si el usuario quiere CAMBIAR ESTADO → SIEMPRE usa la tool "cambiarEstado", NUNCA respondas con texto
+                                - Si el usuario quiere ELIMINAR una cita → SIEMPRE usa la tool "eliminarCita", NUNCA respondas con texto
+                                - NUNCA confirmes una acción sin haberla ejecutado con la tool correspondiente
+                                - Para preguntas o consultas responde con texto normal
 
-REGLAS PARA CREAR CITAS:
-- Para crear una cita NECESITAS obligatoriamente: nombre, teléfono, fecha y hora
-- Si falta alguno de estos datos, PREGUNTA por ellos antes de ejecutar la tool
-- NO ejecutes crearCita hasta tener los 4 datos obligatorios
-- El costo es opcional, no lo pidas a menos que el usuario lo mencione
-- Las fechas deben estar en formato YYYY-MM-DD y las horas en HH:MM
+                                REGLAS PARA CREAR CITAS:
+                                - Para crear una cita NECESITAS obligatoriamente: nombre, teléfono, fecha y hora
+                                - Si falta alguno de estos datos, PREGUNTA por ellos antes de ejecutar la tool
+                                - NO ejecutes crearCita hasta tener los 4 datos obligatorios
+                                - El costo es opcional, no lo pidas a menos que el usuario lo mencione
+                                - Las fechas deben estar en formato YYYY-MM-DD y las horas en HH:MM
 
-Responde siempre en español.
-`
+                                Responde siempre en español.
+                            `
 
         const mensajesLimpios = messages
             .filter((m: any) => m.role === 'user' || m.role === 'assistant')
             .map((m: any) => ({ role: m.role, content: m.content }))
 
         const result = await generateText({
-            model: groq('llama-3.3-70b-versatile'),
+            model: groq('llama-3.1-8b-instant'),
             system: systemPrompt,
             messages: mensajesLimpios,
             maxSteps: 3,
