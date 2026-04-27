@@ -247,64 +247,59 @@ export const changeStatus = async (req: Request, res: Response) => {
 }
 
 export const answerIA = async (req: Request, res: Response) => {
-    // try {
-
-    //     const { messages } = req.body
-
-    //     const citas = await Cita.find({ user_id: req.user!._id as unknown as Schema.Types.ObjectId });
-
-    //     const systemPrompt = `
-    //         Eres un asistente inteligente para una barbería. Tienes acceso completo al sistema de citas.
-    //         Fecha de hoy: ${new Date().toLocaleDateString('es-MX')}
-    //         ${JSON.stringify(citas, null, 2)}
-    //         Puedes responder preguntas sobre las citas, dar métricas y conclusiones.
-    //         Responde siempre en español. Sé directo y útil.
-    //     `
-
-    //     const result = await generateText({
-    //         model: groq('llama-3.3-70b-versatile'),
-    //         system: systemPrompt,
-    //         messages, // array de { role: 'user' | 'assistant', content: string }
-    //     })
-
-    //     res.json({
-    //         ok: true,
-    //         response: result.text,
-    //     })
-
-    // } catch (error) {
-    //     console.log(error)
-    //     res.status(500).json({ error: 'ok inesperado, intentalo nuevamente' });
-    // }
 
     try {
         const { messages } = req.body
         const userId = req.user!._id as unknown as Schema.Types.ObjectId
 
-        const citas = await Cita.find({ user_id: userId })
+        const hoyISO = new Date().toLocaleString('sv-SE', {
+            timeZone: 'America/Mexico_City'
+        }).split(' ')[0] // YYYY-MM-DD correcto en México
+
+        const hoyFormateado = new Date().toLocaleDateString('es-MX', {
+            timeZone: 'America/Mexico_City',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }) // "domingo, 27 de abril de 2026"
+
+        const citas = await Cita.find({
+            user_id: userId,
+            fecha: { $gte: hoyISO }
+        })
+            .sort({ fecha: 1, hora: 1 })
+            .limit(20)
+            .lean()
 
         const systemPrompt = `
                                 Eres un asistente inteligente para una barbería. Tienes acceso completo al sistema de citas.
-                                Fecha de hoy: ${new Date().toLocaleDateString('es-MX')}
+
+                                FECHA DE HOY: ${hoyFormateado} (${hoyISO})
+                                USA SIEMPRE esta fecha como referencia para calcular "mañana", "siguiente lunes", "próximo jueves", etc.
+
+                                IMPORTANTE: Ya tienes acceso completo a las citas. Úsalas para responder consultas.
+                                NUNCA digas que no tienes acceso a la información.
 
                                 === CITAS DEL SISTEMA ===
-                                ${JSON.stringify(citas, null, 2)}
+                                ${JSON.stringify(citas)}
                                 =========================
 
                                 REGLAS ESTRICTAS:
-                                - Si el usuario quiere CREAR una cita → SIEMPRE usa la tool "crearCita", NUNCA respondas con texto
-                                - Si el usuario quiere EDITAR una cita → SIEMPRE usa la tool "editarCita", NUNCA respondas con texto
-                                - Si el usuario quiere CAMBIAR ESTADO → SIEMPRE usa la tool "cambiarEstado", NUNCA respondas con texto
-                                - Si el usuario quiere ELIMINAR una cita → SIEMPRE usa la tool "eliminarCita", NUNCA respondas con texto
+                                - Si el usuario quiere CREAR una cita → usa tool "crearCita"
+                                - Si el usuario quiere EDITAR una cita → usa tool "editarCita"
+                                - Si el usuario quiere CAMBIAR ESTADO → usa tool "cambiarEstado"
+                                - Si el usuario quiere ELIMINAR una cita → usa tool "eliminarCita"
                                 - NUNCA confirmes una acción sin haberla ejecutado con la tool correspondiente
-                                - Para preguntas o consultas responde con texto normal
+                                - SIEMPRE después de ejecutar cualquier tool, responde con un mensaje en texto confirmando lo que hiciste. NUNCA dejes la respuesta vacía.
+                                - NUNCA respondas con JSON crudo, siempre en lenguaje natural
 
                                 REGLAS PARA CREAR CITAS:
-                                - Para crear una cita NECESITAS obligatoriamente: nombre, teléfono, fecha y hora
-                                - Si falta alguno de estos datos, PREGUNTA por ellos antes de ejecutar la tool
-                                - NO ejecutes crearCita hasta tener los 4 datos obligatorios
-                                - El costo es opcional, no lo pidas a menos que el usuario lo mencione
-                                - Las fechas deben estar en formato YYYY-MM-DD y las horas en HH:MM
+                                - NECESITAS obligatoriamente: nombre, teléfono, fecha y hora
+                                - Si falta alguno PREGUNTA antes de ejecutar
+                                - NO ejecutes crearCita hasta tener los 4 datos
+                                - El costo es opcional
+                                - Fechas: YYYY-MM-DD | Horas: HH:MM
 
                                 Responde siempre en español.
                             `
@@ -314,15 +309,14 @@ export const answerIA = async (req: Request, res: Response) => {
             .map((m: any) => ({ role: m.role, content: m.content }))
 
         const result = await generateText({
-            model: groq('llama-3.1-8b-instant'),
+            model: groq('llama-3.3-70b-versatile'),
             system: systemPrompt,
             messages: mensajesLimpios,
-            maxSteps: 3,
+            maxSteps: 5,
             tools: {
 
-                // ── Crear cita ──────────────────────────────────────────────
                 crearCita: tool({
-                    description: 'Crea una nueva cita en el sistema',
+                    description: 'Crea una nueva cita en el sistema. Después de ejecutarla SIEMPRE confirma en texto al usuario.',
                     parameters: z.object({
                         nombre: z.string().describe('Nombre del cliente'),
                         telefono: z.string().describe('Teléfono del cliente'),
@@ -331,26 +325,22 @@ export const answerIA = async (req: Request, res: Response) => {
                         costo: z.number().optional().describe('Costo de la cita'),
                     }),
                     execute: async ({ nombre, telefono, fecha, hora, costo }) => {
-
                         const costoFinal = costo ?? 0
 
-                        // Verifica duplicado de horario
                         const horaDuplicada = await Cita.findOne({ fecha, hora, user_id: userId })
                         if (horaDuplicada) return { ok: false, error: 'Ya hay una cita ese día y hora' }
 
-                        // Verifica duplicado de cliente
                         const clienteDuplicado = await Cita.findOne({ telefono, fecha, user_id: userId })
                         if (clienteDuplicado) return { ok: false, error: 'Ese cliente ya tiene una cita ese día' }
 
                         const cita = new Cita({ nombre, telefono, fecha, hora, costo: costoFinal, user_id: userId })
                         await cita.save()
-                        return { ok: true, mensaje: `Cita creada para ${nombre} el ${fecha} a las ${hora}` }
+                        return { ok: true, mensaje: `Cita creada para ${nombre} el ${fecha} a las ${hora}. Responde confirmando esto al usuario en lenguaje natural.` }
                     }
                 }),
 
-                // ── Editar cita ─────────────────────────────────────────────
                 editarCita: tool({
-                    description: 'Edita una cita existente',
+                    description: 'Edita una cita existente. Después de ejecutarla SIEMPRE confirma en texto al usuario.',
                     parameters: z.object({
                         id: z.string().describe('ID de la cita a editar'),
                         nombre: z.string().optional(),
@@ -367,7 +357,6 @@ export const answerIA = async (req: Request, res: Response) => {
                         const nuevaHora = hora ?? cita.hora
                         const objectId = new mongoose.Types.ObjectId(id)
 
-                        // Verifica duplicado de horario
                         const horaDuplicada = await Cita.findOne({
                             fecha: nuevaFecha, hora: nuevaHora,
                             user_id: userId, _id: { $ne: objectId }
@@ -381,13 +370,12 @@ export const answerIA = async (req: Request, res: Response) => {
                         if (costo !== undefined) cita.costo = costo
 
                         await cita.save()
-                        return { ok: true, mensaje: `Cita de ${cita.nombre} actualizada correctamente` }
+                        return { ok: true, mensaje: `Cita de ${cita.nombre} actualizada correctamente. Responde confirmando esto al usuario en lenguaje natural.` }
                     }
                 }),
 
-                // ── Cambiar estado ──────────────────────────────────────────
                 cambiarEstado: tool({
-                    description: 'Cambia el estado de una cita: pendiente, confirmada, completada, cancelada',
+                    description: 'Cambia el estado de una cita. Después de ejecutarla SIEMPRE confirma en texto al usuario.',
                     parameters: z.object({
                         id: z.string().describe('ID de la cita'),
                         estado: z.enum(['pendiente', 'confirmada', 'completada', 'cancelada']),
@@ -398,13 +386,12 @@ export const answerIA = async (req: Request, res: Response) => {
 
                         cita.estado = estado
                         await cita.save()
-                        return { ok: true, mensaje: `Cita de ${cita.nombre} marcada como ${estado}` }
+                        return { ok: true, mensaje: `Cita de ${cita.nombre} marcada como ${estado}. Responde confirmando esto al usuario en lenguaje natural.` }
                     }
                 }),
 
-                // ── Eliminar cita ───────────────────────────────────────────
                 eliminarCita: tool({
-                    description: 'Elimina una cita del sistema',
+                    description: 'Elimina una cita del sistema. Después de ejecutarla SIEMPRE confirma en texto al usuario.',
                     parameters: z.object({
                         id: z.string().describe('ID de la cita a eliminar'),
                     }),
@@ -414,18 +401,59 @@ export const answerIA = async (req: Request, res: Response) => {
 
                         const nombre = cita.nombre
                         await cita.deleteOne()
-                        return { ok: true, mensaje: `Cita de ${nombre} eliminada correctamente` }
+                        return { ok: true, mensaje: `Cita de ${nombre} eliminada correctamente. Responde confirmando esto al usuario en lenguaje natural.` }
                     }
                 }),
-
             },
             toolChoice: 'auto'
         })
 
-        res.json({ ok: true, type: 'text', response: result.text })
+        let respuesta = result.text
 
-    } catch (error) {
+        if (!respuesta || respuesta.trim() === '') {
+            const steps = result.steps ?? []
+            for (const step of [...steps].reverse()) {
+                if (step.text && step.text.trim() !== '') {
+                    respuesta = step.text
+                    break
+                }
+            }
+        }
+
+        if (!respuesta || respuesta.trim() === '') {
+            respuesta = 'Listo, acción ejecutada correctamente.'
+        }
+
+        res.json({ ok: true, type: 'text', response: respuesta })
+
+    } catch (error: any) {
         console.log(error)
+
+        const mensaje = error?.message ?? ''
+
+        if (mensaje.includes('rate_limit_exceeded') || mensaje.includes('Rate limit')) {
+            const esTPD = mensaje.includes('tokens per day')
+            const esTPM = mensaje.includes('tokens per minute')
+
+            if (esTPD) {
+                const match = mensaje.match(/try again in (.+?)\./)
+                const tiempoEspera = match ? match[1] : 'unas horas'
+                return res.status(429).json({
+                    error: `Se agotaron los tokens disponibles. Intenta de nuevo en ${tiempoEspera}.`
+                })
+            }
+
+            if (esTPM) {
+                return res.status(429).json({
+                    error: 'Demasiadas consultas en poco tiempo. Espera un momento e intenta de nuevo.'
+                })
+            }
+
+            return res.status(429).json({
+                error: 'Límite de uso alcanzado. Intenta más tarde.'
+            })
+        }
+
         res.status(500).json({ error: 'Error inesperado, intenta nuevamente' })
     }
 }
